@@ -11,10 +11,10 @@ import (
 )
 
 type PortfolioHandler struct {
-	svc *service.PortfolioService
+	svc service.PortfolioServicer
 }
 
-func NewPortfolioHandler(svc *service.PortfolioService) *PortfolioHandler {
+func NewPortfolioHandler(svc service.PortfolioServicer) *PortfolioHandler {
 	return &PortfolioHandler{svc: svc}
 }
 

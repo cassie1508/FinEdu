@@ -16,12 +16,13 @@ var (
 )
 
 type PortfolioService struct {
-	repo      *repository.PortfolioRepository
+	repo      repository.PortfolioRepo
 	marketSvc MarketDataService
+	aiRiskSvc AIRiskAnalyzer
 }
 
-func NewPortfolioService(repo *repository.PortfolioRepository, marketSvc MarketDataService) *PortfolioService {
-	return &PortfolioService{repo: repo, marketSvc: marketSvc}
+func NewPortfolioService(repo repository.PortfolioRepo, marketSvc MarketDataService, aiRiskSvc AIRiskAnalyzer) *PortfolioService {
+	return &PortfolioService{repo: repo, marketSvc: marketSvc, aiRiskSvc: aiRiskSvc}
 }
 
 // CreatePortfolio creates a new portfolio for the user.
@@ -256,21 +257,70 @@ func (s *PortfolioService) GetPortfolioSummary(ctx context.Context, userID, port
 	}, nil
 }
 
-// GetPortfolioRisk returns a placeholder response (Week 3 implementation).
-// TODO: Implement AI-powered risk analysis — sector concentration, diversification score, volatility, health score.
+// GetPortfolioRisk returns AI-powered risk analysis for a portfolio.
 func (s *PortfolioService) GetPortfolioRisk(ctx context.Context, userID, portfolioID string) (*models.PortfolioRisk, error) {
 	if _, err := s.verifyOwnership(ctx, userID, portfolioID); err != nil {
 		return nil, err
 	}
 
-	return &models.PortfolioRisk{
-		HealthScore:          nil,
-		RiskLevel:            nil,
-		SectorConcentration:  []models.SectorEntry{},
-		DiversificationScore: nil,
-		Recommendations:      []string{},
-		Message:              "Risk analysis will be available in the next update",
-	}, nil
+	holdings, err := s.repo.GetHoldingsByPortfolio(ctx, portfolioID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(holdings) == 0 {
+		return &models.PortfolioRisk{
+			SectorConcentration: []models.SectorEntry{},
+			Recommendations:     []string{},
+			Message:             "Add holdings to receive risk analysis",
+		}, nil
+	}
+
+	symbols := make([]string, len(holdings))
+	for i, h := range holdings {
+		symbols[i] = h.Symbol
+	}
+	quotes, _ := s.marketSvc.GetBatchQuotes(ctx, symbols)
+
+	var totalValue float64
+	values := make([]float64, len(holdings))
+	for i, h := range holdings {
+		price := 0.0
+		if q, ok := quotes[h.Symbol]; ok {
+			price = q.CurrentPrice
+		}
+		values[i] = h.Shares * price
+		totalValue += values[i]
+	}
+
+	analysisInput := make([]HoldingForAnalysis, len(holdings))
+	for i, h := range holdings {
+		pct := 0.0
+		if totalValue > 0 {
+			pct = (values[i] / totalValue) * 100
+		}
+		price := 0.0
+		if q, ok := quotes[h.Symbol]; ok {
+			price = q.CurrentPrice
+		}
+		analysisInput[i] = HoldingForAnalysis{
+			Symbol:            h.Symbol,
+			Shares:            h.Shares,
+			AllocationPercent: pct,
+			CurrentPrice:      price,
+		}
+	}
+
+	risk, err := s.aiRiskSvc.AnalyzeRisk(ctx, analysisInput)
+	if err != nil {
+		return &models.PortfolioRisk{
+			SectorConcentration: []models.SectorEntry{},
+			Recommendations:     []string{},
+			Message:             "AI analysis temporarily unavailable",
+		}, nil
+	}
+
+	return risk, nil
 }
 
 // verifyOwnership checks that the portfolio exists and belongs to the user.

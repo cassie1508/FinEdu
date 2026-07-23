@@ -16,6 +16,19 @@ var (
 	ErrDuplicate = errors.New("duplicate record")
 )
 
+// PortfolioRepo defines the persistence contract for portfolios and holdings.
+type PortfolioRepo interface {
+	CreatePortfolio(ctx context.Context, userID, name, description string) (*models.Portfolio, error)
+	GetPortfolioByID(ctx context.Context, portfolioID string) (*models.Portfolio, error)
+	ListPortfoliosByUser(ctx context.Context, userID string) ([]models.PortfolioListItem, error)
+	DeletePortfolio(ctx context.Context, portfolioID string) error
+	AddHolding(ctx context.Context, portfolioID, symbol string, shares, averageCost float64) (*models.PortfolioHolding, error)
+	GetHoldingByID(ctx context.Context, holdingID string) (*models.PortfolioHolding, error)
+	GetHoldingsByPortfolio(ctx context.Context, portfolioID string) ([]models.PortfolioHolding, error)
+	UpdateHolding(ctx context.Context, holdingID string, shares, averageCost float64) (*models.PortfolioHolding, error)
+	DeleteHolding(ctx context.Context, holdingID string) error
+}
+
 type PortfolioRepository struct {
 	pool *pgxpool.Pool
 }

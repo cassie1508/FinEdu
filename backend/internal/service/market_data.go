@@ -22,12 +22,25 @@ type MarketDataService interface {
 
 type FinnhubMarketData struct {
 	apiKey     string
+	baseURL    string
 	httpClient *http.Client
 }
 
 func NewFinnhubMarketData(apiKey string) *FinnhubMarketData {
 	return &FinnhubMarketData{
-		apiKey: apiKey,
+		apiKey:  apiKey,
+		baseURL: "https://finnhub.io",
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
+	}
+}
+
+// NewFinnhubMarketDataWithBaseURL creates a FinnhubMarketData pointing at a custom base URL (used in tests).
+func NewFinnhubMarketDataWithBaseURL(apiKey, baseURL string) *FinnhubMarketData {
+	return &FinnhubMarketData{
+		apiKey:  apiKey,
+		baseURL: baseURL,
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -45,7 +58,7 @@ type finnhubQuoteResponse struct {
 }
 
 func (f *FinnhubMarketData) GetQuote(ctx context.Context, symbol string) (*models.StockQuote, error) {
-	url := fmt.Sprintf("https://finnhub.io/api/v1/quote?symbol=%s&token=%s", symbol, f.apiKey)
+	url := fmt.Sprintf("%s/api/v1/quote?symbol=%s&token=%s", f.baseURL, symbol, f.apiKey)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

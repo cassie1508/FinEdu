@@ -38,7 +38,10 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, cfg config.Config) {
 			service.NewFinnhubMarketData(cfg.MarketDataAPIKey),
 			60*time.Second,
 		)
-		portfolioSvc := service.NewPortfolioService(portfolioRepo, marketData)
+		aiRiskSvc := service.NewOpenAIRiskService(service.OpenAIRiskConfig{
+			APIKey: cfg.OpenAIAPIKey,
+		})
+		portfolioSvc := service.NewPortfolioService(portfolioRepo, marketData, aiRiskSvc)
 		portfolioHandler := handlers.NewPortfolioHandler(portfolioSvc)
 
 		portfolio := api.Group("/portfolio")
