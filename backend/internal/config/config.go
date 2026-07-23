@@ -7,13 +7,13 @@ import (
 )
 
 type Config struct {
-	Port               string
-	DatabaseURL        string
-	SupabaseURL        string
-	SupabaseJWTSecret  string
-	OpenAIAPIKey       string
-	MarketDataAPIKey   string
-	AllowedOrigin      string
+	Port             string
+	DatabaseURL      string
+	SupabaseURL      string
+	SupabaseAnonKey  string
+	OpenAIAPIKey     string
+	MarketDataAPIKey string
+	AllowedOrigin    string
 }
 
 func Load() Config {
@@ -21,13 +21,13 @@ func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		Port:              getEnv("PORT", "8080"),
-		DatabaseURL:       getEnv("DATABASE_URL", ""),
-		SupabaseURL:       getEnv("SUPABASE_URL", ""),
-		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
-		OpenAIAPIKey:      getEnv("OPENAI_API_KEY", ""),
-		MarketDataAPIKey:  getEnv("MARKET_DATA_API_KEY", ""),
-		AllowedOrigin:     getEnv("ALLOWED_ORIGIN", "http://localhost:5173"),
+		Port:             getEnv("PORT", "8080"),
+		DatabaseURL:      getEnv("DATABASE_URL", ""),
+		SupabaseURL:      getEnv("SUPABASE_URL", ""),
+		SupabaseAnonKey:  getEnv("SUPABASE_ANON_KEY", ""),
+		OpenAIAPIKey:     getEnv("OPENAI_API_KEY", ""),
+		MarketDataAPIKey: getEnv("MARKET_DATA_API_KEY", ""),
+		AllowedOrigin:    getEnv("ALLOWED_ORIGIN", "http://localhost:5173"),
 	}
 }
 

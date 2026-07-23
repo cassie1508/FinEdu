@@ -82,10 +82,9 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-Fill in `SUPABASE_URL` / `SUPABASE_JWT_SECRET` (backend) and
-`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (frontend) from your Supabase
-project's Settings → API page. Ask in the team chat if you don't have access
-to the shared Supabase project yet.
+Fill in `SUPABASE_URL` (backend) and `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`
+(frontend) from your Supabase project's Settings → API page. Ask in the team
+chat if you don't have access to the shared Supabase project yet.
 
 ### 2. Start local Postgres
 
