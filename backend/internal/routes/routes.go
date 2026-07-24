@@ -23,6 +23,17 @@ func Register(r *gin.Engine) {
 		{
 			learning.POST("/chat", handlers.ChatWithAI)
 			learning.GET("/flashcards", handlers.GetFlashcards)
+			learning.GET("/flashcards/:id", handlers.GetFlashcardByID)
+			learning.POST("/flashcards", handlers.CreateFlashcard)
+			learning.PUT("/flashcards/:id", handlers.UpdateFlashcard)
+			learning.DELETE("/flashcards/:id", handlers.DeleteFlashcard)
+			learning.POST("/flashcards/:id/review", handlers.ReviewFlashcard)
+
+		}
+
+		learningCenter := api.Group("/learning_center")
+		{
+			learningCenter.GET("/resources", handlers.GetLearningResources)
 		}
 
 		portfolio := api.Group("/portfolio")

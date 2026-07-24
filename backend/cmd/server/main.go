@@ -15,12 +15,19 @@ import (
 func main() {
 	cfg := config.Load()
 
-	ctx := context.Background()
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
-	if err != nil {
-		log.Fatalf("database connection failed: %v", err)
+	// Initialize mock flashcard data
+	db.InitMockFlashcards()
+
+	if cfg.UseMockData || cfg.DatabaseURL == "" {
+		log.Print("mock mode enabled or DATABASE_URL empty: skipping PostgreSQL connection")
+	} else {
+		ctx := context.Background()
+		pool, err := db.Connect(ctx, cfg.DatabaseURL)
+		if err != nil {
+			log.Fatalf("database connection failed: %v", err)
+		}
+		defer pool.Close()
 	}
-	defer pool.Close()
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{

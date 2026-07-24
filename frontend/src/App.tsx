@@ -9,15 +9,17 @@ import { PortfolioPage } from './features/portfolio/pages/PortfolioPage'
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/dashboard" element={<CompanyDashboardPage />} />
-          <Route path="/news" element={<NewsChartsPage />} />
-          <Route path="/learn" element={<LearningCenterPage />} />
-          <Route path="/portfolio" element={<PortfolioPage />} />
-        </Routes>
-      </Layout>
+      <div className="h-screen w-screen overflow-hidden bg-brand-bg">
+        <Layout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/dashboard" element={<CompanyDashboardPage />} />
+            <Route path="/news" element={<NewsChartsPage />} />
+            <Route path="/learn" element={<LearningCenterPage />} />
+            <Route path="/portfolio" element={<PortfolioPage />} />
+          </Routes>
+        </Layout>
+      </div>
     </BrowserRouter>
   )
 }
