@@ -4,6 +4,8 @@ export interface Company {
   sector: string
   industry: string
   marketCap: number
+  revenue: number
+  eps: number
   peRatio: number
   dividendYield: number
   weekHigh52: number
