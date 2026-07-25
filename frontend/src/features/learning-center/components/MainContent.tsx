@@ -2,12 +2,16 @@ import { colors } from '../lib/colors';
 import { FlashcardSection } from './FlashcardSection';
 import { ResourceSection } from './ResourceSection';
 import { Flashcard } from '../lib/types';
+import { FlashcardInput } from '../lib/flashcardsApi';
 
 interface MainContentProps {
   flashcards: Flashcard[];
+  onCreateFlashcard: (input: FlashcardInput) => Promise<void>;
+  onUpdateFlashcard: (id: string, input: FlashcardInput) => Promise<void>;
+  onDeleteFlashcard: (id: string) => Promise<void>;
 }
 
-export function MainContent({ flashcards }: MainContentProps) {
+export function MainContent({ flashcards, onCreateFlashcard, onUpdateFlashcard, onDeleteFlashcard }: MainContentProps) {
   return (
     <div
       className="flex overflow-hidden flex flex-col gap-2 p-6 flex-1"
@@ -18,7 +22,12 @@ export function MainContent({ flashcards }: MainContentProps) {
     >
       {/* Flashcard Section - Left/Top with scroll */}
       <div className="flex-1 min-h-0">
-        <FlashcardSection flashcards={flashcards} />
+        <FlashcardSection
+          flashcards={flashcards}
+          onCreateFlashcard={onCreateFlashcard}
+          onUpdateFlashcard={onUpdateFlashcard}
+          onDeleteFlashcard={onDeleteFlashcard}
+        />
       </div>
 
       {/* Resource Section - Right/Bottom with scroll */}

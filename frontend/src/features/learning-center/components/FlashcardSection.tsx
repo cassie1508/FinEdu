@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { Plus, X, Edit2, Save } from 'lucide-react';
+import { Plus, X, Edit2, Save, Trash2 } from 'lucide-react';
 import { Textfit } from 'react-textfit';
 import { colors } from '../lib/colors';
 import { Flashcard } from '../lib/types';
+import { FlashcardInput } from '../lib/flashcardsApi';
 
 interface FlashcardSectionProps {
   flashcards: Flashcard[];
+  onCreateFlashcard: (input: FlashcardInput) => Promise<void>;
+  onUpdateFlashcard: (id: string, input: FlashcardInput) => Promise<void>;
+  onDeleteFlashcard: (id: string) => Promise<void>;
 }
 
 const categories = [
@@ -21,19 +25,26 @@ const categories = [
 interface FlashcardCardProps {
   card: Flashcard;
   onCardClick: (card: Flashcard) => void;
+  onDelete: (id: string) => void;
 }
 
-function FlashcardCard({ card, onCardClick }: FlashcardCardProps) {
+function FlashcardCard({ card, onCardClick, onDelete }: FlashcardCardProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     onCardClick(card);
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    onDelete(card.id);
+  };
+
   return (
     <div
       onClick={handleClick}
-      className="group h-48 cursor-pointer perspective transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+      className="group relative h-48 cursor-pointer perspective transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
       style={{
         backgroundColor: colors.surface,
         border: `1px solid ${colors.border}`,
@@ -41,6 +52,15 @@ function FlashcardCard({ card, onCardClick }: FlashcardCardProps) {
         padding: '16px',
       }}
     >
+      <button
+        onClick={handleDeleteClick}
+        className="absolute top-2 right-2 z-10 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:shadow-md"
+        style={{ backgroundColor: colors.secondary, color: colors.accent }}
+        title="Delete flashcard"
+        aria-label="Delete flashcard"
+      >
+        <Trash2 size={16} />
+      </button>
       <div className="relative h-full flex flex-col" style={{ gap: '12px' }}>
         {/* Category Tag */}
         <div
@@ -311,7 +331,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 interface CreateFlashcardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (newCard: Flashcard) => void;
+  onCreate: (input: FlashcardInput) => Promise<void>;
 }
 
 function CreateFlashcardModal({ isOpen, onClose, onCreate }: CreateFlashcardModalProps) {
@@ -327,6 +347,7 @@ function CreateFlashcardModal({ isOpen, onClose, onCreate }: CreateFlashcardModa
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   if (!isOpen) return null;
 
@@ -334,27 +355,34 @@ function CreateFlashcardModal({ isOpen, onClose, onCreate }: CreateFlashcardModa
     setNewCard({ ...newCard, [field]: value });
   };
 
-  const handleCreate = () => {
-    // Generate a simple ID for now (backend will handle real IDs)
-    const cardToCreate = {
-      ...newCard,
-      id: `card-${Date.now()}`,
-    };
-    onCreate(cardToCreate);
-    // Reset form
-    setNewCard({
-      id: '',
-      title: '',
-      category: categories[1],
-      definition: '',
-      example: '',
-      whyItMatters: '',
-      commonMisconceptions: '',
-      reviewCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-    onClose();
+  const handleCreate = async () => {
+    setIsSaving(true);
+    try {
+      await onCreate({
+        title: newCard.title,
+        category: newCard.category,
+        whyItMatters: newCard.whyItMatters,
+        definition: newCard.definition,
+        example: newCard.example,
+        commonMisconceptions: newCard.commonMisconceptions,
+      });
+      // Reset form
+      setNewCard({
+        id: '',
+        title: '',
+        category: categories[1],
+        definition: '',
+        example: '',
+        whyItMatters: '',
+        commonMisconceptions: '',
+        reviewCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      onClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -515,11 +543,12 @@ function CreateFlashcardModal({ isOpen, onClose, onCreate }: CreateFlashcardModa
           </button>
           <button
             onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-white"
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-white disabled:opacity-60"
             style={{ backgroundColor: colors.primary }}
           >
             <Plus size={18} />
-            Create Flashcard
+            {isSaving ? 'Creating...' : 'Create Flashcard'}
           </button>
         </div>
       </div>
@@ -527,12 +556,11 @@ function CreateFlashcardModal({ isOpen, onClose, onCreate }: CreateFlashcardModa
   );
 }
 
-export function FlashcardSection({ flashcards }: FlashcardSectionProps) {
+export function FlashcardSection({ flashcards, onCreateFlashcard, onUpdateFlashcard, onDeleteFlashcard }: FlashcardSectionProps) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedCard, setSelectedCard] = useState<Flashcard | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [cardsList, setCardsList] = useState<Flashcard[]>(flashcards);
 
   const handleCardClick = (card: Flashcard) => {
     setSelectedCard(card);
@@ -544,27 +572,41 @@ export function FlashcardSection({ flashcards }: FlashcardSectionProps) {
     setSelectedCard(null);
   };
 
-  const handleSaveCard = (updatedCard: Flashcard) => {
-    setCardsList(cardsList.map(c => c.id === updatedCard.id ? updatedCard : c));
+  const handleSaveCard = async (updatedCard: Flashcard) => {
+    await onUpdateFlashcard(updatedCard.id, {
+      title: updatedCard.title,
+      category: updatedCard.category,
+      whyItMatters: updatedCard.whyItMatters,
+      definition: updatedCard.definition,
+      example: updatedCard.example,
+      commonMisconceptions: updatedCard.commonMisconceptions,
+    });
     setIsModalOpen(false);
     setSelectedCard(null);
-    // TODO: Save to backend
   };
 
   const handleAddButton = () => {
     setIsCreateModalOpen(true);
   };
 
-  const handleCreateCard = (newCard: Flashcard) => {
-    setCardsList([...cardsList, newCard]);
+  const handleCreateCard = async (input: FlashcardInput) => {
+    await onCreateFlashcard(input);
     setIsCreateModalOpen(false);
-    // TODO: Save to backend
+  };
+
+  const handleDeleteCard = async (id: string) => {
+    if (!window.confirm('Delete this flashcard? This cannot be undone.')) return;
+    await onDeleteFlashcard(id);
+    if (selectedCard?.id === id) {
+      setIsModalOpen(false);
+      setSelectedCard(null);
+    }
   };
 
   const filteredCards =
     selectedCategory === 'All'
-      ? cardsList
-      : cardsList.filter(card => card.category === selectedCategory);
+      ? flashcards
+      : flashcards.filter(card => card.category === selectedCategory);
 
   return (
     <div
@@ -635,6 +677,7 @@ export function FlashcardSection({ flashcards }: FlashcardSectionProps) {
               key={card.id}
               card={card}
               onCardClick={handleCardClick}
+              onDelete={handleDeleteCard}
             />
           ))}
         </div>

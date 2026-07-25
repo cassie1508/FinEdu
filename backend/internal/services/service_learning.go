@@ -1,131 +1,65 @@
 package services
 
 import (
-	"errors"
-	"fmt"
+	"context"
 	"strings"
-	"time"
 
 	"finedu-backend/internal/db"
 	"finedu-backend/internal/models"
 )
 
-var (
-	ErrFlashcardNotFound = errors.New("flashcard not found")
-	ErrInvalidTopic      = errors.New("topic is required")
-	ErrInvalidCount      = errors.New("count must be greater than or equal to 0")
-)
+// ErrFlashcardNotFound is returned when a flashcard cannot be found for the given id/user.
+var ErrFlashcardNotFound = db.ErrFlashcardNotFound
 
-func GetAllFlashcards() []models.Flashcard {
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	cards := make([]models.Flashcard, len(db.FlashcardStore))
-	copy(cards, db.FlashcardStore)
-	return cards
+// FlashcardService contains the business logic for flashcards and delegates
+// persistence to a FlashcardRepository.
+type FlashcardService struct {
+	repo *db.FlashcardRepository
 }
 
-func GetFlashcardByID(id string) (models.Flashcard, error) {
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	for _, flashcard := range db.FlashcardStore {
-		if flashcard.ID == id {
-			return flashcard, nil
-		}
-	}
-
-	return models.Flashcard{}, ErrFlashcardNotFound
+// NewFlashcardService creates a FlashcardService backed by the given repository.
+func NewFlashcardService(repo *db.FlashcardRepository) *FlashcardService {
+	return &FlashcardService{repo: repo}
 }
 
-func CreateFlashcard(req models.CreateFlashcardRequest) models.Flashcard {
+// GetAllFlashcards returns every flashcard owned by userID.
+func (s *FlashcardService) GetAllFlashcards(ctx context.Context, userID string) ([]models.Flashcard, error) {
+	return s.repo.GetAllFlashcards(ctx, userID)
+}
+
+// GetFlashcardByID returns a single flashcard owned by userID.
+func (s *FlashcardService) GetFlashcardByID(ctx context.Context, id, userID string) (models.Flashcard, error) {
+	return s.repo.GetFlashcardByID(ctx, id, userID)
+}
+
+// CreateFlashcard validates/normalizes the request and creates a new flashcard.
+func (s *FlashcardService) CreateFlashcard(ctx context.Context, userID string, req models.CreateFlashcardRequest) (models.Flashcard, error) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Category = strings.TrimSpace(req.Category)
 	req.WhyItMatters = strings.TrimSpace(req.WhyItMatters)
 	req.Definition = strings.TrimSpace(req.Definition)
 	req.Example = strings.TrimSpace(req.Example)
 
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	now := time.Now().UTC()
-	card := models.Flashcard{
-		ID:                  fmt.Sprintf("fc-%d", db.FlashcardSeq),
-		CreatedAt:           now,
-		UpdatedAt:           now,
-		Title:               req.Title,
-		Category:            req.Category,
-		WhyItMatters:        req.WhyItMatters,
-		Definition:          req.Definition,
-		Example:             req.Example,
-		CommonMisconception: req.CommonMisconception,
-		ReviewCount:         0,
-	}
-	db.FlashcardSeq++
-	db.FlashcardStore = append(db.FlashcardStore, card)
-
-	return card
+	return s.repo.CreateFlashcard(ctx, userID, req)
 }
 
-func UpdateFlashcard(id string, req models.UpdateFlashcardRequest) (models.Flashcard, error) {
+// UpdateFlashcard validates/normalizes the request and updates an existing flashcard.
+func (s *FlashcardService) UpdateFlashcard(ctx context.Context, id, userID string, req models.UpdateFlashcardRequest) (models.Flashcard, error) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Category = strings.TrimSpace(req.Category)
 	req.WhyItMatters = strings.TrimSpace(req.WhyItMatters)
 	req.Definition = strings.TrimSpace(req.Definition)
 	req.Example = strings.TrimSpace(req.Example)
 
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	for idx, card := range db.FlashcardStore {
-		if card.ID != id {
-			continue
-		}
-
-		card.Title = req.Title
-		card.Category = req.Category
-		card.WhyItMatters = req.WhyItMatters
-		card.Definition = req.Definition
-		card.Example = req.Example
-		card.CommonMisconception = req.CommonMisconception
-		card.UpdatedAt = time.Now().UTC()
-		db.FlashcardStore[idx] = card
-		return card, nil
-	}
-
-	return models.Flashcard{}, ErrFlashcardNotFound
+	return s.repo.UpdateFlashcard(ctx, id, userID, req)
 }
 
-func DeleteFlashcard(id string) error {
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	for idx, card := range db.FlashcardStore {
-		if card.ID != id {
-			continue
-		}
-
-		db.FlashcardStore = append(db.FlashcardStore[:idx], db.FlashcardStore[idx+1:]...)
-		return nil
-	}
-
-	return ErrFlashcardNotFound
+// DeleteFlashcard deletes a flashcard owned by userID.
+func (s *FlashcardService) DeleteFlashcard(ctx context.Context, id, userID string) error {
+	return s.repo.DeleteFlashcard(ctx, id, userID)
 }
 
-func ReviewFlashcard(id string) (models.Flashcard, error) {
-	db.FlashcardStoreMu.Lock()
-	defer db.FlashcardStoreMu.Unlock()
-
-	for idx, card := range db.FlashcardStore {
-		if card.ID != id {
-			continue
-		}
-
-		card.ReviewCount++
-		card.UpdatedAt = time.Now().UTC()
-		db.FlashcardStore[idx] = card
-		return card, nil
-	}
-
-	return models.Flashcard{}, ErrFlashcardNotFound
+// ReviewFlashcard increments the review count for a flashcard owned by userID.
+func (s *FlashcardService) ReviewFlashcard(ctx context.Context, id, userID string) (models.Flashcard, error) {
+	return s.repo.ReviewFlashcard(ctx, id, userID)
 }

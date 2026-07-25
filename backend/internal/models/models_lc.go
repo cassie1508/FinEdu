@@ -9,7 +9,7 @@ type Flashcard struct {
 	WhyItMatters        string    `json:"whyItMatters"`
 	Definition          string    `json:"definition"`
 	Example             string    `json:"example"`
-	CommonMisconception string    `json:"commonMisconception"`
+	CommonMisconception string    `json:"commonMisconceptions"`
 	ReviewCount         int       `json:"reviewCount"`
 	UpdatedAt           time.Time `json:"updatedAt"`
 	CreatedAt           time.Time `json:"createdAt"`
@@ -21,7 +21,7 @@ type CreateFlashcardRequest struct {
 	WhyItMatters        string `json:"whyItMatters" binding:"required"`
 	Definition          string `json:"definition" binding:"required"`
 	Example             string `json:"example"`
-	CommonMisconception string `json:"commonMisconception"`
+	CommonMisconception string `json:"commonMisconceptions"`
 }
 
 type UpdateFlashcardRequest struct {
@@ -30,7 +30,7 @@ type UpdateFlashcardRequest struct {
 	WhyItMatters        string `json:"whyItMatters" binding:"required"`
 	Definition          string `json:"definition" binding:"required"`
 	Example             string `json:"example"`
-	CommonMisconception string `json:"commonMisconception"`
+	CommonMisconception string `json:"commonMisconceptions"`
 }
 
 type Documents struct {

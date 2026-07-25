@@ -1,21 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { AIChatSidebar } from '../components/AIChatSidebar';
 import { MainContent } from '../components/MainContent';
 import { RightSidebar } from '../components/RightSidebar';
-import { mockFlashcards, mockProgress } from '../lib/mockData';
+import { mockProgress } from '../lib/mockData';
 import { colors } from '../lib/colors';
 import { Navbar } from '../../../components/layout/Navbar';
+import { Flashcard } from '../lib/types';
+import { createFlashcard, deleteFlashcard, fetchFlashcards, FlashcardInput, updateFlashcard } from '../lib/flashcardsApi';
 
 export function LearningCenterPage() {
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
+  const [flashcardsError, setFlashcardsError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchFlashcards()
+      .then(setFlashcards)
+      .catch(() => setFlashcardsError('Failed to load flashcards from the server.'));
+  }, []);
+
+  const handleCreateFlashcard = async (input: FlashcardInput) => {
+    const created = await createFlashcard(input);
+    setFlashcards(prev => [...prev, created]);
+  };
+
+  const handleUpdateFlashcard = async (id: string, input: FlashcardInput) => {
+    const updated = await updateFlashcard(id, input);
+    setFlashcards(prev => prev.map(card => (card.id === id ? updated : card)));
+  };
+
+  const handleDeleteFlashcard = async (id: string) => {
+    await deleteFlashcard(id);
+    setFlashcards(prev => prev.filter(card => card.id !== id));
+  };
 
   return (
     <div className="relative h-screen overflow-hidden" style={{ backgroundColor: colors.background }}>
       <Navbar />
+      {flashcardsError && (
+        <p className="px-6 pt-2 text-sm" style={{ color: colors.accent }}>
+          {flashcardsError}
+        </p>
+      )}
       <div className="flex h-full overflow-hidden">
         {/* Main Content Area */}
-        <MainContent flashcards={mockFlashcards} />
+        <MainContent
+          flashcards={flashcards}
+          onCreateFlashcard={handleCreateFlashcard}
+          onUpdateFlashcard={handleUpdateFlashcard}
+          onDeleteFlashcard={handleDeleteFlashcard}
+        />
 
         {/* Right Sidebar - Analytics */}
         <aside className="w-80 flex-shrink-0 overflow-y-scroll scrollbar-custom">

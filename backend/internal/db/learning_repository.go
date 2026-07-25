@@ -10,6 +10,8 @@ import (
 	"finedu-backend/internal/models"
 )
 
+var ErrFlashcardNotFound = errors.New("flashcard not found")
+
 type FlashcardRepository struct {
 	pool *pgxpool.Pool
 }
@@ -37,10 +39,11 @@ func (r *FlashcardRepository) GetAllFlashcards(ctx context.Context, userID strin
 	var flashcards []models.Flashcard
 	for rows.Next() {
 		var card models.Flashcard
+		var ownerID string
 
 		err := rows.Scan(
 			&card.ID,
-			nil, // user_id (not needed in response)
+			&ownerID,
 			&card.Title,
 			&card.Category,
 			&card.WhyItMatters,
@@ -75,10 +78,11 @@ func (r *FlashcardRepository) GetFlashcardByID(ctx context.Context, id, userID s
 	`
 
 	var card models.Flashcard
+	var ownerID string
 
 	err := r.pool.QueryRow(ctx, query, id, userID).Scan(
 		&card.ID,
-		nil, // user_id
+		&ownerID,
 		&card.Title,
 		&card.Category,
 		&card.WhyItMatters,
@@ -92,7 +96,7 @@ func (r *FlashcardRepository) GetFlashcardByID(ctx context.Context, id, userID s
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Flashcard{}, errors.New("flashcard not found")
+			return models.Flashcard{}, ErrFlashcardNotFound
 		}
 		return models.Flashcard{}, err
 	}
@@ -179,7 +183,7 @@ func (r *FlashcardRepository) UpdateFlashcard(ctx context.Context, id, userID st
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Flashcard{}, errors.New("flashcard not found")
+			return models.Flashcard{}, ErrFlashcardNotFound
 		}
 		return models.Flashcard{}, err
 	}
@@ -200,7 +204,7 @@ func (r *FlashcardRepository) DeleteFlashcard(ctx context.Context, id, userID st
 	}
 
 	if result.RowsAffected() == 0 {
-		return errors.New("flashcard not found")
+		return ErrFlashcardNotFound
 	}
 
 	return nil
@@ -233,7 +237,7 @@ func (r *FlashcardRepository) ReviewFlashcard(ctx context.Context, id, userID st
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return models.Flashcard{}, errors.New("flashcard not found")
+			return models.Flashcard{}, ErrFlashcardNotFound
 		}
 		return models.Flashcard{}, err
 	}
