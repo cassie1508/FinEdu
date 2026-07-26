@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -10,11 +11,17 @@ import (
 	"finedu-backend/internal/repository"
 )
 
-type CompanyHandler struct {
-	repo *repository.CompanyRepository
+// CompanyRepo là interface để handler test được (mock khi test).
+type CompanyRepo interface {
+	GetBySymbol(ctx context.Context, symbol string) (*models.Company, error)
+	Search(ctx context.Context, query string) ([]models.Company, error)
 }
 
-func NewCompanyHandler(repo *repository.CompanyRepository) *CompanyHandler {
+type CompanyHandler struct {
+	repo CompanyRepo
+}
+
+func NewCompanyHandler(repo CompanyRepo) *CompanyHandler {
 	return &CompanyHandler{repo: repo}
 }
 
