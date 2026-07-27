@@ -25,6 +25,18 @@ export interface LearningResource {
 
 export type ResourceType = 'all' | 'video' | 'article' | 'podcast';
 
+export interface Podcast {
+  id: string;
+  title: string;
+  publisher: string;
+  description: string;
+  image: string;
+  website: string;
+  listennotesUrl: string;
+  totalEpisodes?: number;
+  explicitContent?: boolean;
+}
+
 export interface ConversationMessage {
   id: string;
   role: 'user' | 'assistant';

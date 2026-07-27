@@ -16,6 +16,7 @@ import (
 	"finedu-backend/internal/models"
 	"finedu-backend/internal/services"
 
+	listennotes "github.com/ListenNotes/podcast-api-go"
 	"github.com/gin-gonic/gin"
 )
 
@@ -166,6 +167,102 @@ func splitRelatedSymbols(related string) []string {
 	}
 
 	return parts
+}
+
+func getPodcastAPIKey() string {
+	apiKey := strings.TrimSpace(os.Getenv("LISTEN_NOTES_API_KEY"))
+	if apiKey == "" {
+		apiKey = strings.TrimSpace(os.Getenv("FINNHUB_API_KEY"))
+	}
+	return apiKey
+}
+
+// podcastGenre mirrors the shape of a single entry in the Listen Notes
+// GET /genres response, e.g. {"id": 68, "name": "Business", "parent_id": null}.
+type podcastGenre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func getGenreIDsForFinancePodcasts() []string {
+	apiKey := getPodcastAPIKey()
+	if apiKey == "" {
+		return []string{}
+	}
+	client := listennotes.NewClient(apiKey)
+	resp, err := client.FetchPodcastGenres(map[string]string{"top_level_only": "1"})
+	if err != nil {
+		return []string{}
+	}
+
+	// resp.Data is an untyped map[string]interface{}, so we round-trip the
+	// "genres" field through JSON to decode it into a typed slice.
+	raw, ok := resp.Data["genres"]
+	if !ok {
+		return []string{}
+	}
+
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		return []string{}
+	}
+
+	var genres []podcastGenre
+	if err := json.Unmarshal(encoded, &genres); err != nil {
+		return []string{}
+	}
+
+	wantedGenres := map[string]bool{"Finance": true, "Business": true}
+	var genreIDs []string
+	for _, genre := range genres {
+		if wantedGenres[genre.Name] {
+			genreIDs = append(genreIDs, strconv.Itoa(genre.ID))
+		}
+	}
+	return genreIDs
+}
+func searchFinancePodcasts(c *gin.Context, query string) (*listennotes.Response, error) {
+	apiKey := getPodcastAPIKey()
+	if apiKey == "" {
+		return nil, fmt.Errorf("LISTEN_NOTES_API_KEY (or FINNHUB_API_KEY) is not configured")
+	}
+	genreID := getGenreIDsForFinancePodcasts()
+	client := listennotes.NewClient(apiKey)
+	resp, err := client.Search(map[string]string{
+		"q":               query,
+		"sort_by_date":    "1",
+		"type":            "podcast",
+		"offset":          "0",
+		"genre_ids":       strings.Join(genreID, ","),
+		"only_in":         "title,description",
+		"language":        "English",
+		"safe_mode":       "0",
+		"interviews_only": "0",
+		"sponsored_only":  "0",
+		"page_size":       "10",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search podcasts: %w", err)
+	}
+	return resp, nil
+}
+
+// GetPodcastByListennotes returns finance-related podcasts sourced from the
+// Listen Notes API.
+// Endpoint: GET /api/v1/learning/resources/podcast
+func GetPodcastByListennotes(c *gin.Context) {
+	query := strings.TrimSpace(c.Query("q"))
+	if query == "" {
+		query = "finance"
+	}
+
+	resp, err := searchFinancePodcasts(c, query)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch podcasts", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": resp.Data})
 }
 
 // GetFlashcards returns flashcards for a given financial topic.

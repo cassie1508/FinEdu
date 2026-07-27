@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { colors } from '../lib/colors';
-import { LearningResource } from '../lib/types';
+import { LearningResource, Podcast } from '../lib/types';
 import { fetchLearningResources } from '../lib/resourcesApi';
+import { fetchFinancePodcasts } from '../lib/podcastsApi';
+
+const PODCAST_TAB = 'Podcast';
 
 function isSafeHttpUrl(url: string): boolean {
   try {
@@ -19,6 +22,11 @@ export function ResourceSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [isLoadingPodcasts, setIsLoadingPodcasts] = useState(false);
+  const [podcastError, setPodcastError] = useState<string | null>(null);
+  const [podcastsLoaded, setPodcastsLoaded] = useState(false);
+
   const loadResources = () => {
     setIsLoading(true);
     setError(null);
@@ -28,11 +36,33 @@ export function ResourceSection() {
       .finally(() => setIsLoading(false));
   };
 
+  const loadPodcasts = () => {
+    setIsLoadingPodcasts(true);
+    setPodcastError(null);
+    fetchFinancePodcasts()
+      .then(result => {
+        setPodcasts(result);
+        setPodcastsLoaded(true);
+      })
+      .catch(() => setPodcastError('Failed to load podcasts.'))
+      .finally(() => setIsLoadingPodcasts(false));
+  };
+
   useEffect(() => {
     loadResources();
   }, []);
 
-  const tabs = ['All', ...Array.from(new Set(resources.map(resource => resource.category))).sort()];
+  useEffect(() => {
+    if (activeTab === PODCAST_TAB && !podcastsLoaded && !isLoadingPodcasts) {
+      loadPodcasts();
+    }
+  }, [activeTab, podcastsLoaded, isLoadingPodcasts]);
+
+  const tabs = [
+    'All',
+    ...Array.from(new Set(resources.map(resource => resource.category))).sort(),
+    PODCAST_TAB,
+  ];
 
   const filteredResources =
     activeTab === 'All'
@@ -62,13 +92,16 @@ export function ResourceSection() {
             </p>
           </div>
           <button
-            onClick={loadResources}
-            disabled={isLoading}
+            onClick={activeTab === PODCAST_TAB ? loadPodcasts : loadResources}
+            disabled={activeTab === PODCAST_TAB ? isLoadingPodcasts : isLoading}
             className="p-2 rounded-lg transition-all hover:shadow-md flex-shrink-0 disabled:opacity-60"
             style={{ color: colors.primary }}
             aria-label="Refresh resources"
           >
-            <RotateCcw size={20} className={isLoading ? 'animate-spin' : undefined} />
+            <RotateCcw
+              size={20}
+              className={(activeTab === PODCAST_TAB ? isLoadingPodcasts : isLoading) ? 'animate-spin' : undefined}
+            />
           </button>
         </div>
 
@@ -92,61 +125,123 @@ export function ResourceSection() {
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-8 space-y-4 scrollbar-custom">
-        {error && <p style={{ color: colors.accent }}>{error}</p>}
-        {!error && isLoading && <p style={{ color: colors.accent }}>Loading resources...</p>}
-        {!error && !isLoading && filteredResources.length === 0 && (
-          <p style={{ color: colors.accent }}>No resources in this category yet.</p>
-        )}
-        {filteredResources.map(resource => {
-          const safeUrl = isSafeHttpUrl(resource.url) ? resource.url : undefined;
-          const safeImageUrl = resource.imageUrl && isSafeHttpUrl(resource.imageUrl) ? resource.imageUrl : undefined;
+        {activeTab === PODCAST_TAB ? (
+          <>
+            {podcastError && <p style={{ color: colors.accent }}>{podcastError}</p>}
+            {!podcastError && isLoadingPodcasts && <p style={{ color: colors.accent }}>Loading podcasts...</p>}
+            {!podcastError && !isLoadingPodcasts && podcasts.length === 0 && (
+              <p style={{ color: colors.accent }}>No podcasts found.</p>
+            )}
+            {podcasts.map(podcast => {
+              const safeUrl = isSafeHttpUrl(podcast.listennotesUrl) ? podcast.listennotesUrl : undefined;
+              const safeImageUrl = podcast.image && isSafeHttpUrl(podcast.image) ? podcast.image : undefined;
 
-          return (
-            <a
-              key={resource.id}
-              href={safeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex gap-4 p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer"
-              style={{
-                backgroundColor: colors.background,
-                borderColor: colors.border,
-              }}
-            >
-              <div
-                className="w-24 h-24 rounded-lg flex-shrink-0"
-                style={{
-                  backgroundColor: colors.secondary,
-                  backgroundImage: safeImageUrl ? `url(${safeImageUrl})` : undefined,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className="text-xs font-semibold px-2 py-1 rounded"
-                    style={{
-                      background: 'linear-gradient(135deg, #9EC0FF 0%, #F8FAFF 45%, #FFF6E2 72%, #FFDF94 100%)',
-                      color: colors.emphasis,
-                    }}
-                  >
-                    {resource.category}
-                  </span>
-                </div>
-                <h4
-                  className="font-medium text-sm mb-1 line-clamp-2"
-                  style={{ color: colors.emphasis }}
+              return (
+                <a
+                  key={podcast.id}
+                  href={safeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex gap-4 p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer"
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  }}
                 >
-                  {resource.title}
-                </h4>
-                <p className="text-xs" style={{ color: colors.accent }}>
-                  {resource.source}
-                </p>
-              </div>
-            </a>
-          );
-        })}
+                  <div
+                    className="w-24 h-24 rounded-lg flex-shrink-0"
+                    style={{
+                      backgroundColor: colors.secondary,
+                      backgroundImage: safeImageUrl ? `url(${safeImageUrl})` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="text-xs font-semibold px-2 py-1 rounded"
+                        style={{
+                          background: 'linear-gradient(135deg, #9EC0FF 0%, #F8FAFF 45%, #FFF6E2 72%, #FFDF94 100%)',
+                          color: colors.emphasis,
+                        }}
+                      >
+                        Podcast
+                      </span>
+                    </div>
+                    <h4
+                      className="font-medium text-sm mb-1 line-clamp-2"
+                      style={{ color: colors.emphasis }}
+                    >
+                      {podcast.title}
+                    </h4>
+                    <p className="text-xs" style={{ color: colors.accent }}>
+                      {podcast.publisher}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </>
+        ) : (
+          <>
+            {error && <p style={{ color: colors.accent }}>{error}</p>}
+            {!error && isLoading && <p style={{ color: colors.accent }}>Loading resources...</p>}
+            {!error && !isLoading && filteredResources.length === 0 && (
+              <p style={{ color: colors.accent }}>No resources in this category yet.</p>
+            )}
+            {filteredResources.map(resource => {
+              const safeUrl = isSafeHttpUrl(resource.url) ? resource.url : undefined;
+              const safeImageUrl = resource.imageUrl && isSafeHttpUrl(resource.imageUrl) ? resource.imageUrl : undefined;
+
+              return (
+                <a
+                  key={resource.id}
+                  href={safeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex gap-4 p-4 rounded-lg border transition-all hover:shadow-md cursor-pointer"
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <div
+                    className="w-24 h-24 rounded-lg flex-shrink-0"
+                    style={{
+                      backgroundColor: colors.secondary,
+                      backgroundImage: safeImageUrl ? `url(${safeImageUrl})` : undefined,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="text-xs font-semibold px-2 py-1 rounded"
+                        style={{
+                          background: 'linear-gradient(135deg, #9EC0FF 0%, #F8FAFF 45%, #FFF6E2 72%, #FFDF94 100%)',
+                          color: colors.emphasis,
+                        }}
+                      >
+                        {resource.category}
+                      </span>
+                    </div>
+                    <h4
+                      className="font-medium text-sm mb-1 line-clamp-2"
+                      style={{ color: colors.emphasis }}
+                    >
+                      {resource.title}
+                    </h4>
+                    <p className="text-xs" style={{ color: colors.accent }}>
+                      {resource.source}
+                    </p>
+                  </div>
+                </a>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );

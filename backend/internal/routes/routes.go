@@ -28,6 +28,7 @@ func Register(r *gin.Engine) {
 			learning.PUT("/flashcards/:id", handlers.UpdateFlashcard)
 			learning.DELETE("/flashcards/:id", handlers.DeleteFlashcard)
 			learning.POST("/flashcards/:id/review", handlers.ReviewFlashcard)
+			learning.GET("/resources/podcast", handlers.GetPodcastByListennotes)
 
 		}
 
