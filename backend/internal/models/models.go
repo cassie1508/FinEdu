@@ -3,15 +3,17 @@ package models
 import "time"
 
 type Company struct {
-	Symbol         string  `json:"symbol"`
-	Name           string  `json:"name"`
-	Sector         string  `json:"sector"`
-	Industry       string  `json:"industry"`
-	MarketCap      float64 `json:"marketCap"`
-	PERatio        float64 `json:"peRatio"`
-	DividendYield  float64 `json:"dividendYield"`
-	WeekHigh52     float64 `json:"weekHigh52"`
-	WeekLow52      float64 `json:"weekLow52"`
+	Symbol        string  `json:"symbol"`
+	Name          string  `json:"name"`
+	Sector        string  `json:"sector"`
+	Industry      string  `json:"industry"`
+	MarketCap     float64 `json:"marketCap"`
+	Revenue       float64 `json:"revenue"`
+	EPS           float64 `json:"eps"`
+	PERatio       float64 `json:"peRatio"`
+	DividendYield float64 `json:"dividendYield"`
+	WeekHigh52    float64 `json:"weekHigh52"`
+	WeekLow52     float64 `json:"weekLow52"`
 }
 
 type PortfolioHolding struct {

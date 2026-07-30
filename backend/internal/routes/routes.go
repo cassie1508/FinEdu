@@ -5,14 +5,16 @@ import (
 
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"finedu-backend/internal/config"
 	"finedu-backend/internal/handlers"
 	"finedu-backend/internal/middleware"
+	"finedu-backend/internal/repository"
 	"finedu-backend/internal/service"
 )
 
-func Register(r *gin.Engine, jwks keyfunc.Keyfunc, cfg config.Config) {
+func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg config.Config) {
 	r.GET("/health", handlers.HealthCheck)
 
 	api := r.Group("/api/v1")
@@ -30,10 +32,13 @@ func Register(r *gin.Engine, jwks keyfunc.Keyfunc, cfg config.Config) {
 		)
 		chartsHandler := handlers.NewChartsHandler(marketData)
 
+		companyRepo := repository.NewCompanyRepository(pool)
+		companyHandler := handlers.NewCompanyHandler(companyRepo)
+
 		companies := api.Group("/companies")
 		{
-			companies.GET("", handlers.SearchCompanies)
-			companies.GET("/:symbol", handlers.GetCompany)
+			companies.GET("", companyHandler.SearchCompanies)
+			companies.GET("/:symbol", companyHandler.GetCompany)
 			companies.GET("/:symbol/prices", chartsHandler.GetPriceHistory)
 		}
 
