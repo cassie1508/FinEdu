@@ -15,7 +15,7 @@ with transparent reasoning instead of blind "Buy/Sell" calls.
 | Database (dev) | PostgreSQL, local via Docker Compose                |
 | Database (prod)| Supabase Postgres                                   |
 | Auth           | Supabase Auth (used in both dev and prod)           |
-| AI             | OpenAI API (chat, summaries, portfolio analysis)    |
+| AI             | Gemini API (news summaries); chat/portfolio analysis TBD |
 | Market Data    | Alpha Vantage / Finnhub / Twelve Data (TBD by API limits) |
 | Deployment     | Vercel (frontend), Render/Railway (backend), Supabase (prod DB) |
 

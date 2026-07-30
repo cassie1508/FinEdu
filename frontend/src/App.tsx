@@ -1,8 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
-import { CompanyDashboardPage } from './features/company-dashboard/pages/CompanyDashboardPage'
-import { NewsChartsPage } from './features/news-charts/pages/NewsChartsPage'
+import { MarketDashboardPage } from './features/market-dashboard/pages/MarketDashboardPage'
+import { NewsPage } from './features/news/pages/NewsPage'
 import { LearningCenterPage } from './features/learning-center/pages/LearningCenterPage'
 import { PortfolioPage } from './features/portfolio/pages/PortfolioPage'
 import { LoginPage } from './features/auth/pages/LoginPage'
@@ -35,8 +35,8 @@ function App() {
             <Layout>
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/dashboard" element={<CompanyDashboardPage />} />
-                <Route path="/news" element={<NewsChartsPage />} />
+                <Route path="/dashboard" element={<MarketDashboardPage />} />
+                <Route path="/news" element={<NewsPage />} />
                 <Route path="/learn" element={<LearningCenterPage />} />
                 <Route path="/portfolio" element={<PortfolioPage />} />
               </Routes>

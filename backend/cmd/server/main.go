@@ -42,7 +42,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	routes.Register(r, jwks, cfg)
+	routes.Register(r, pool, jwks, cfg)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

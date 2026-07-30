@@ -1,16 +1,36 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useSession } from '../../lib/useSession'
+import { supabase } from '../../lib/supabaseClient'
 
 const links = [
   { to: '/', label: 'Home' },
   { to: '/dashboard', label: 'Market Dashboard' },
-  { to: '/news', label: 'News & Charts' },
+  { to: '/news', label: 'News' },
   { to: '/learn', label: 'Learning Center' },
   { to: '/portfolio', label: 'Portfolio' },
 ]
 
 export function Navbar({ transparent = false }: { transparent?: boolean }) {
   const session = useSession()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLLIElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpen])
+
+  const handleLogout = async () => {
+    setMenuOpen(false)
+    await supabase.auth.signOut()
+  }
 
   return (
     <nav
@@ -44,14 +64,27 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
             </li>
           ))}
           {session && (
-            <li>
+            <li className="relative" ref={menuRef}>
               <button
                 type="button"
                 aria-label="Profile"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((open) => !open)}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <ProfileIcon />
               </button>
+              {menuOpen && (
+                <div className="absolute right-0 top-11 z-10 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-800 dark:bg-gray-900">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="block w-full px-4 py-2 text-left text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-100"
+                  >
+                    Log out
+                  </button>
+                </div>
+              )}
             </li>
           )}
         </ul>
