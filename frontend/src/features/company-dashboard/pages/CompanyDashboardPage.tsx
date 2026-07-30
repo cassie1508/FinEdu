@@ -31,7 +31,7 @@ export function CompanyDashboardPage() {
       const data = await api.get<Company>(`/api/v1/companies/${symbol.toUpperCase()}`)
       setCompany(data)
     } catch {
-      setError(`Không tìm thấy công ty "${symbol.toUpperCase()}"`)
+      setError('No company found for ' + symbol.toUpperCase())
       setCompany(null)
     } finally {
       setLoading(false)
@@ -42,7 +42,7 @@ export function CompanyDashboardPage() {
     ? [
         { label: 'Market Cap', value: formatBig(company.marketCap) },
         { label: 'P/E Ratio', value: company.peRatio.toFixed(2) },
-        { label: 'Revenue', value: formatBig(company.revenue) },
+        { label: 'Revenue/Share', value: '$' + company.revenue.toFixed(2) },
         { label: 'EPS', value: company.eps.toFixed(2) },
         { label: 'Dividend Yield', value: company.dividendYield.toFixed(2) + '%' },
         { label: '52W High', value: company.weekHigh52.toFixed(2) },
@@ -139,7 +139,7 @@ export function CompanyDashboardPage() {
           </>
         )}
 
-        {/* Placeholder chừa chỗ cho Nhi */}
+        {/* Placeholder for Nhi */}
         <div className="flex min-h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 text-center text-sm text-slate-400">
           Interactive Stock Chart · News · AI Summary (owner: Nhi)
         </div>

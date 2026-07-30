@@ -60,3 +60,16 @@ func (r *CompanyRepository) Search(ctx context.Context, query string) ([]models.
 	}
 	return results, nil
 }
+	func (r *CompanyRepository) Upsert(ctx context.Context, c *models.Company) error {
+		_, err := r.pool.Exec(ctx,
+			`INSERT INTO companies (symbol, name, sector, industry, market_cap, revenue, eps,
+					pe_ratio, dividend_yield, week_high_52, week_low_52, updated_at)
+			 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, NOW())
+			 ON CONFLICT (symbol) DO UPDATE SET
+			   name=$2, sector=$3, industry=$4, market_cap=$5, revenue=$6, eps=$7,
+			   pe_ratio=$8, dividend_yield=$9, week_high_52=$10, week_low_52=$11, updated_at=NOW()`,
+			c.Symbol, c.Name, c.Sector, c.Industry, c.MarketCap, c.Revenue, c.EPS,
+			c.PERatio, c.DividendYield, c.WeekHigh52, c.WeekLow52,
+		)
+		return err
+	}

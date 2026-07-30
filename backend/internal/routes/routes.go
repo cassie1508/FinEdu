@@ -7,6 +7,7 @@ import (
 	"finedu-backend/internal/config"
 	"finedu-backend/internal/handlers"
 	"finedu-backend/internal/repository"
+	"finedu-backend/internal/service"
 )
 
 func Register(r *gin.Engine, pool *pgxpool.Pool, cfg config.Config) {
@@ -15,7 +16,8 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, cfg config.Config) {
 	api := r.Group("/api/v1")
 	{
 		companyRepo := repository.NewCompanyRepository(pool)
-		companyHandler := handlers.NewCompanyHandler(companyRepo)
+		companyDataService := service.NewCompanyDataService(cfg.MarketDataAPIKey)
+		companyHandler := handlers.NewCompanyHandler(companyRepo, companyDataService)
 
 		companies := api.Group("/companies")
 		{
