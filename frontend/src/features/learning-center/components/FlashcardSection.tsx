@@ -190,7 +190,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 
           {/* Title */}
           <div>
-            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.accent }}>
+            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.text.secondary }}>
               TITLE
             </h3>
             {isEditing ? (
@@ -214,7 +214,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 
           {/* Definition */}
           <div>
-            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.accent }}>
+            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.text.secondary }}>
               DEFINITION
             </h3>
             {isEditing ? (
@@ -235,7 +235,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 
           {/* Why It Matters */}
           <div>
-            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.accent }}>
+            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.text.secondary }}>
               WHY IT MATTERS
             </h3>
             {isEditing ? (
@@ -256,7 +256,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 
           {/* Example */}
           <div>
-            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.accent }}>
+            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.text.secondary }}>
               EXAMPLE
             </h3>
             {isEditing ? (
@@ -277,7 +277,7 @@ function FlashcardDetailModal({ card, isOpen, onClose, onSave }: FlashcardDetail
 
           {/* Common Misconceptions */}
           <div>
-            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.accent }}>
+            <h3 className="text-xs font-semibold mb-2" style={{ color: colors.text.secondary }}>
               COMMON MISCONCEPTIONS
             </h3>
             {isEditing ? (

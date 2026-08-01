@@ -1,11 +1,43 @@
-import { useState } from 'react';
-import { Send, Paperclip, MessageSquare, X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Send, Paperclip, MessageSquare, X, Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import { colors } from '../lib/colors';
+import { api } from '../../../lib/api';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  sources?: string[]; // filenames of source documents
+}
+
+interface UploadedDocument {
+  id: string;
+  filename: string;
+  chunksCount: number;
+  status: 'uploading' | 'success' | 'error';
+  error?: string;
+}
+
+interface DocumentUploadResponse {
+  success: boolean;
+  documentId: string;
+  chunksCount: number;
+  embeddingsStored: number;
+  embeddingModel: string;
+  message: string;
+}
+
+interface RetrievedChunk {
+  text: string;
+  filename: string;
+  similarityScore: number;
+}
+
+interface RAGQueryResponse {
+  success: boolean;
+  query: string;
+  retrievedChunks: RetrievedChunk[];
+  generatedResponse: string;
 }
 
 const suggestedPrompts = [
@@ -21,36 +53,158 @@ interface AIChatSidebarProps {
 
 export function AIChatSidebar({ mode = 'sidebar', onClose }: AIChatSidebarProps) {
   const isPopup = mode === 'popup';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [sessionId] = useState(() => `session-${Date.now()}`);
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: "Hi, I'm your AI finance tutor. Ask me anything or upload a document, report, earnings report or SEC filing and I'll explain it.",
+      content: "Hi, I'm your AI finance tutor. Upload a PDF document (earnings report, SEC filing, etc.) and ask me questions about it. I'll explain it using AI!",
     },
   ]);
   const [input, setInput] = useState('');
+  const [uploadedDocs, setUploadedDocs] = useState<UploadedDocument[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = () => {
-    if (input.trim()) {
-      const newMessage: ChatMessage = {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Please upload a PDF file');
+      return;
+    }
+
+    // Create document entry with uploading status
+    const docId = Date.now().toString();
+    const newDoc: UploadedDocument = {
+      id: docId,
+      filename: file.name,
+      chunksCount: 0,
+      status: 'uploading',
+    };
+    setUploadedDocs(prev => [...prev, newDoc]);
+
+    try {
+      // Create FormData for multipart upload
+      const formData = new FormData();
+      formData.append('sessionId', sessionId);
+      formData.append('file', file);
+
+      // Call document upload API with FormData
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'}/api/v1/documents/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+
+      const result = await response.json() as DocumentUploadResponse;
+
+      if (result.success) {
+        setUploadedDocs(prev =>
+          prev.map(doc =>
+            doc.id === docId
+              ? {
+                  ...doc,
+                  status: 'success',
+                  chunksCount: result.chunksCount || 0,
+                }
+              : doc
+          )
+        );
+
+        // Add system message about successful upload
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `sys-${Date.now()}`,
+            role: 'assistant',
+            content: `✅ Successfully uploaded "${file.name}" (${result.chunksCount} chunks). Now you can ask questions about it!`,
+          },
+        ]);
+      } else {
+        throw new Error(result.message || 'Upload failed');
+      }
+    } catch (error: any) {
+      setUploadedDocs(prev =>
+        prev.map(doc =>
+          doc.id === docId
+            ? {
+                ...doc,
+                status: 'error',
+                error: error.message || 'Upload failed',
+              }
+            : doc
+        )
+      );
+    }
+
+    // Clear file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (input.trim() && !isLoading) {
+      const userMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'user',
         content: input,
       };
-      setMessages([...messages, newMessage]);
+      setMessages(prev => [...prev, userMessage]);
       setInput('');
+      setIsLoading(true);
 
-      // Simulate assistant response
-      setTimeout(() => {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
+      try {
+        // If documents are uploaded, query RAG pipeline
+        if (uploadedDocs.some(doc => doc.status === 'success')) {
+          const response = await api.post<RAGQueryResponse>('/api/v1/rag/query', {
+            sessionId,
+            query: userMessage.content,
+            topK: 5,
+          });
+
+          if (response.success) {
+            const sourceFiles = Array.from(
+              new Set(
+                (response.retrievedChunks || []).map((chunk: any) => chunk.filename).filter(Boolean)
+              )
+            );
+
+            const assistantMessage: ChatMessage = {
+              id: `${Date.now()}-assistant`,
+              role: 'assistant',
+              content: response.generatedResponse || 'No response generated',
+              sources: sourceFiles.length > 0 ? sourceFiles : undefined,
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+          } else {
+            throw new Error(response.generatedResponse || 'Query failed');
+          }
+        } else {
+          // Fallback: generic response when no documents uploaded
+          const assistantMessage: ChatMessage = {
+            id: `${Date.now()}-assistant`,
             role: 'assistant',
-            content: 'I understand your question. Let me break this down for you...',
-          },
-        ]);
-      }, 500);
+            content:
+              'I need a document to answer your question. Please upload a PDF first (earnings report, SEC filing, etc.), then ask your question.',
+          };
+          setMessages(prev => [...prev, assistantMessage]);
+        }
+      } catch (error: any) {
+        const errorMessage: ChatMessage = {
+          id: `${Date.now()}-error`,
+          role: 'assistant',
+          content: `Sorry, I encountered an error: ${error.message}`,
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -88,32 +242,99 @@ export function AIChatSidebar({ mode = 'sidebar', onClose }: AIChatSidebarProps)
           )}
         </div>
         <p className="text-sm" style={{ color: colors.accent }}>
-          AI-powered educational assistant
+          Upload PDFs & ask questions
         </p>
+
+        {/* Uploaded Documents */}
+        {uploadedDocs.length > 0 && (
+          <div className="mt-4 space-y-2">
+            {uploadedDocs.map(doc => (
+              <div
+                key={doc.id}
+                className="flex items-center gap-2 text-xs p-2 rounded-lg"
+                style={{ backgroundColor: colors.surface }}
+              >
+                {doc.status === 'uploading' && (
+                  <div className="animate-spin" style={{ color: colors.primary }}>
+                    <Upload size={14} />
+                  </div>
+                )}
+                {doc.status === 'success' && (
+                  <CheckCircle size={14} style={{ color: '#10b981' }} />
+                )}
+                {doc.status === 'error' && (
+                  <AlertCircle size={14} style={{ color: '#ef4444' }} />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="truncate font-medium" style={{ color: colors.text.primary }}>
+                    {doc.filename}
+                  </p>
+                  {doc.status === 'success' && (
+                    <p className="text-xs" style={{ color: colors.accent }}>
+                      {doc.chunksCount} chunks
+                    </p>
+                  )}
+                  {doc.status === 'error' && (
+                    <p className="text-xs" style={{ color: '#ef4444' }}>
+                      {doc.error}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Conversation Area */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {messages.map(msg => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-xs p-3 rounded-lg text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'rounded-br-none'
-                  : 'rounded-bl-none'
-              }`}
-              style={{
-                backgroundColor: msg.role === 'user' ? colors.primary : colors.secondary,
-                color: msg.role === 'user' ? colors.text.light : colors.text.primary,
-              }}
-            >
-              {msg.content}
+          <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className="w-full max-w-xs">
+              <div
+                className={`p-3 rounded-lg text-sm leading-relaxed ${
+                  msg.role === 'user' ? 'rounded-br-none' : 'rounded-bl-none'
+                }`}
+                style={{
+                  backgroundColor: msg.role === 'user' ? colors.primary : colors.secondary,
+                  color: msg.role === 'user' ? colors.text.light : colors.text.primary,
+                }}
+              >
+                {msg.content}
+              </div>
+              {msg.sources && msg.sources.length > 0 && (
+                <p className="text-xs mt-1 px-2" style={{ color: colors.accent }}>
+                  📄 Source: {msg.sources.join(', ')}
+                </p>
+              )}
             </div>
           </div>
         ))}
+
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div
+              className="p-3 rounded-lg rounded-bl-none"
+              style={{ backgroundColor: colors.secondary }}
+            >
+              <div className="flex gap-1">
+                <div
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ backgroundColor: colors.primary, animationDelay: '0ms' }}
+                />
+                <div
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ backgroundColor: colors.primary, animationDelay: '150ms' }}
+                />
+                <div
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ backgroundColor: colors.primary, animationDelay: '300ms' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Suggested Prompts (show when limited messages) */}
         {messages.length <= 1 && (
@@ -148,24 +369,36 @@ export function AIChatSidebar({ mode = 'sidebar', onClose }: AIChatSidebarProps)
             borderColor: colors.border,
           }}
         >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf"
+            onChange={handleFileSelect}
+            className="hidden"
+            aria-label="Upload PDF"
+          />
           <button
-            className="p-1 transition-opacity hover:opacity-70"
+            onClick={() => fileInputRef.current?.click()}
+            className="p-1 transition-opacity hover:opacity-70 flex-shrink-0"
             style={{ color: colors.accent }}
+            title="Upload PDF document"
           >
             <Paperclip size={18} />
           </button>
           <input
             type="text"
-            placeholder="Ask about any finance topic..."
+            placeholder="Ask about the document..."
             value={input}
             onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-            className="flex-1 bg-transparent outline-none text-sm"
+            onKeyDown={e => e.key === 'Enter' && !isLoading && handleSendMessage()}
+            disabled={isLoading}
+            className="flex-1 bg-transparent outline-none text-sm disabled:opacity-50"
             style={{ color: colors.text.primary }}
           />
           <button
             onClick={handleSendMessage}
-            className="p-1 transition-opacity hover:opacity-70"
+            disabled={isLoading}
+            className="p-1 transition-opacity hover:opacity-70 disabled:opacity-50 flex-shrink-0"
             style={{ color: colors.primary }}
           >
             <Send size={18} />

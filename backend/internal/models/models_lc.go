@@ -64,3 +64,40 @@ type FinnhubNewsItem struct {
 	Summary  string `json:"summary"`
 	URL      string `json:"url"`
 }
+
+// ========== RAG Pipeline Models ==========
+
+type DocumentUploadRequest struct {
+	SessionID string `json:"sessionId" binding:"required"`
+	Filename  string `json:"filename" binding:"required"`
+	Content   string `json:"content" binding:"required"`
+}
+
+type DocumentUploadResponse struct {
+	Success          bool   `json:"success"`
+	DocumentID       string `json:"documentId"`
+	ChunksCount      int    `json:"chunksCount"`
+	EmbeddingsStored int    `json:"embeddingsStored"`
+	EmbeddingModel   string `json:"embeddingModel"`
+	Message          string `json:"message"`
+}
+
+type RAGQueryRequest struct {
+	Query string `json:"query" binding:"required"`
+	TopK  int    `json:"topK"`
+}
+
+type RetrievedChunk struct {
+	Text            string  `json:"text"`
+	Filename        string  `json:"filename"`
+	SimilarityScore float64 `json:"similarityScore"`
+}
+
+type RAGQueryResponse struct {
+	Success           bool             `json:"success"`
+	Query             string           `json:"query"`
+	RetrievedChunks   []RetrievedChunk `json:"retrievedChunks"`
+	GeneratedResponse string           `json:"generatedResponse"`
+	ChunkCount        int              `json:"chunkCount"`
+	Message           string           `json:"message"`
+}

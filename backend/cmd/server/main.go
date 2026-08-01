@@ -52,7 +52,7 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	routes.Register(r)
+	routes.Register(r, pool, defaultUserID)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,6 +22,53 @@ CREATE TABLE IF NOT EXISTS flashcards (
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS document (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    session_id VARCHAR(255) NOT NULL,
+    filename VARCHAR(255) NOT NULL,
+    filetype VARCHAR(100) NOT NULL,
+    storage_url TEXT NOT NULL,
+    content TEXT,
+    upload_status VARCHAR(50) NOT NULL DEFAULT 'pending',
+    uploaded_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS document_chunk (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    chunk_index INT NOT NULL,
+    chunk_text TEXT NOT NULL,
+    token_count INT,
+    metadata JSONB DEFAULT '{}'::JSONB,
+    embedding VECTOR(768),
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (document_id, chunk_index)
+);
+
+CREATE TABLE IF NOT EXISTS vector_store (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    document_id UUID NOT NULL REFERENCES document(id) ON DELETE CASCADE,
+    chunk_id UUID NOT NULL REFERENCES document_chunk(id) ON DELETE CASCADE,
+    embedding VECTOR(768) NOT NULL,
+    embedding_model VARCHAR(100),
+    metadata JSONB DEFAULT '{}'::JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE (chunk_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_document_user_id ON document(user_id);
+CREATE INDEX IF NOT EXISTS idx_document_session_id ON document(session_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunk_document_id ON document_chunk(document_id);
+CREATE INDEX IF NOT EXISTS idx_document_chunk_user_id ON document_chunk(user_id);
+CREATE INDEX IF NOT EXISTS idx_vector_store_user_id ON vector_store(user_id);
+CREATE INDEX IF NOT EXISTS idx_vector_store_document_id ON vector_store(document_id);
+CREATE INDEX IF NOT EXISTS idx_vector_store_chunk_id ON vector_store(chunk_id);
 
 -- ============ SQL QUERIES FOR FLASHCARD OPERATIONS ============
 

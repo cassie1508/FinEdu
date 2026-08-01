@@ -16,6 +16,7 @@ pnpm-debug.log*
 # Backend (Go)
 backend/tmp
 backend/bin
+backend/venv
 *.exe
 *.exe~
 *.dll

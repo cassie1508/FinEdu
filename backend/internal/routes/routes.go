@@ -2,11 +2,12 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"finedu-backend/internal/handlers"
 )
 
-func Register(r *gin.Engine) {
+func Register(r *gin.Engine, pool *pgxpool.Pool, defaultUserID string) {
 	r.GET("/health", handlers.HealthCheck)
 
 	api := r.Group("/api/v1")
@@ -35,6 +36,25 @@ func Register(r *gin.Engine) {
 		learningCenter := api.Group("/learning_center")
 		{
 			learningCenter.GET("/resources", handlers.GetLearningResources)
+		}
+
+		// RAG Pipeline endpoints
+		rag := api.Group("/rag")
+		{
+			ragHandler := handlers.NewRAGHandler(pool, defaultUserID)
+			rag.POST("/query", ragHandler.QueryRAG)
+		}
+
+		// AI Recommendation endpoints
+		recommendations := api.Group("/recommendations")
+		{
+			recommendations.POST("", handlers.GetRecommendations(pool, defaultUserID))
+		}
+
+		documents := api.Group("/documents")
+		{
+			ragHandler := handlers.NewRAGHandler(pool, defaultUserID)
+			documents.POST("/upload", ragHandler.UploadDocument)
 		}
 
 		portfolio := api.Group("/portfolio")
