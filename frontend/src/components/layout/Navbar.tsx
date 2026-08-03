@@ -29,33 +29,35 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
 
   const handleLogout = async () => {
     setMenuOpen(false)
-    await supabase.auth.signOut()
+    await supabase?.auth.signOut()
   }
 
   return (
     <nav
       className={
         transparent
-          ? 'px-6 py-4'
-          : 'border-b border-gray-200 bg-white px-6 py-4 dark:border-gray-800 dark:bg-gray-950'
+          ? 'px-4 py-4 sm:px-6 lg:px-8'
+          : 'border-b border-[#CACDDC] bg-[#F1F0F3] px-4 py-4 sm:px-6 lg:px-8'
       }
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <Link to="/" className="flex shrink-0 items-center gap-2">
           <FinEduLogo />
-          <span className="text-lg font-semibold text-gray-900 dark:text-gray-100">FinEdu</span>
+          <span className="text-lg font-bold tracking-[-0.03em] text-[#31302F]">
+            Fin<span className="text-[#6E6C6F]">Edu</span>
+          </span>
         </Link>
-        <ul className="flex items-center gap-6">
+        <ul className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 pb-1 sm:mx-0 sm:gap-2 sm:px-0 sm:pb-0">
           {links.map((link) => (
-            <li key={link.to}>
+            <li key={link.to} className="shrink-0">
               <NavLink
                 to={link.to}
                 end={link.to === '/'}
                 className={({ isActive }) =>
-                  `text-sm font-medium ${
+                  `block rounded-full px-3 py-2 text-sm font-semibold transition-colors ${
                     isActive
-                      ? 'text-indigo-600 dark:text-indigo-400'
-                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100'
+                      ? 'bg-[#31302F] text-[#F1F0F3]'
+                      : 'text-[#6E6C6F] hover:bg-[#E3DEDE] hover:text-[#31302F]'
                   }`
                 }
               >
@@ -112,7 +114,7 @@ export function Navbar({ transparent = false }: { transparent?: boolean }) {
 function FinEduLogo() {
   return (
     <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="28" height="28" rx="8" fill="#1F1F1F" />
+      <rect width="28" height="28" rx="8" fill="#31302F" />
       <path
         d="M8 18.5L11.8 14.2L14.6 16.8L20 10.5"
         stroke="white"

@@ -6,6 +6,10 @@ export function useSession() {
   const [session, setSession] = useState<Session | null | undefined>(undefined)
 
   useEffect(() => {
+    if (!supabase) {
+      setSession(null)
+      return
+    }
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const {
       data: { subscription },

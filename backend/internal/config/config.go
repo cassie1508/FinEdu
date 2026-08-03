@@ -14,6 +14,7 @@ type Config struct {
 	GeminiAPIKey       string
 	AlphaVantageAPIKey string
 	FinnhubAPIKey      string
+	OpenAIAPIKey       string
 	AllowedOrigin      string
 }
 
@@ -29,6 +30,7 @@ func Load() Config {
 		GeminiAPIKey:       getEnv("GEMINI_API_KEY", ""),
 		AlphaVantageAPIKey: getEnv("ALPHA_VANTAGE_API_KEY", ""),
 		FinnhubAPIKey:      getEnv("FINNHUB_API_KEY", ""),
+		OpenAIAPIKey:       getEnv("OPENAI_API_KEY", ""),
 		AllowedOrigin:      getEnv("ALLOWED_ORIGIN", "http://localhost:5173"),
 	}
 }

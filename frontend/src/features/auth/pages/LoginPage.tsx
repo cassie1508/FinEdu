@@ -13,6 +13,10 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setError(null)
+    if (!supabase) {
+      setError('Authentication is not configured.')
+      return
+    }
     setIsSubmitting(true)
 
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
@@ -27,12 +31,20 @@ export function LoginPage() {
 
   async function handleGoogleSignIn() {
     setError(null)
+    if (!supabase) {
+      setError('Authentication is not configured.')
+      return
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
     if (oauthError) setError(oauthError.message)
   }
 
   async function handleAppleSignIn() {
     setError(null)
+    if (!supabase) {
+      setError('Authentication is not configured.')
+      return
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'apple' })
     if (oauthError) setError(oauthError.message)
   }

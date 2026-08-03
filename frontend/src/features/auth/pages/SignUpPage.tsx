@@ -74,12 +74,20 @@ export function SignUpPage() {
 
   async function handleGoogleSignUp() {
     setFormError(null)
+    if (!supabase) {
+      setFormError('Authentication is not configured.')
+      return
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'google' })
     if (oauthError) setFormError(oauthError.message)
   }
 
   async function handleAppleSignUp() {
     setFormError(null)
+    if (!supabase) {
+      setFormError('Authentication is not configured.')
+      return
+    }
     const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider: 'apple' })
     if (oauthError) setFormError(oauthError.message)
   }

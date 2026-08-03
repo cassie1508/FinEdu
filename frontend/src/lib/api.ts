@@ -1,8 +1,22 @@
+import { supabase } from './supabaseClient'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+
+  // Inject Supabase auth token if user is logged in
+  if (supabase) {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.access_token) {
+      headers['Authorization'] = `Bearer ${session.access_token}`
+    }
+  }
+
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...options,
   })
 
@@ -13,6 +27,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
         ? body.error
         : `API request failed: ${res.status} ${res.statusText}`
     throw new Error(message)
+  }
+
+  if (res.status === 204) {
+    return undefined as T
   }
 
   return res.json() as Promise<T>

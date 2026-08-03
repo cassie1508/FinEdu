@@ -68,13 +68,34 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg confi
 			learning.GET("/flashcards", handlers.GetFlashcards)
 		}
 
+		// Portfolio routes — require authentication
+		portfolioRepo := repository.NewPortfolioRepository(pool)
+		quoteData := service.NewCachedQuoteData(
+			service.NewFinnhubMarketData(cfg.FinnhubAPIKey),
+			60*time.Second,
+		)
+		// Uses Gemini (already required for news summaries) rather than OpenAI
+		// for now, so portfolio risk analysis doesn't need a separate paid key.
+		aiRiskSvc := service.NewGeminiRiskService(service.GeminiRiskConfig{
+			APIKey: cfg.GeminiAPIKey,
+		})
+		portfolioSvc := service.NewPortfolioService(portfolioRepo, quoteData, aiRiskSvc)
+		portfolioHandler := handlers.NewPortfolioHandler(portfolioSvc)
+
 		portfolio := api.Group("/portfolio")
 		portfolio.Use(middleware.RequireAuth(jwks))
 		{
-			portfolio.GET("/holdings", handlers.ListHoldings)
-			portfolio.POST("/holdings", handlers.AddHolding)
-			portfolio.DELETE("/holdings/:id", handlers.RemoveHolding)
-			portfolio.GET("/risk", handlers.GetPortfolioRisk)
+			portfolio.POST("/portfolios", portfolioHandler.CreatePortfolio)
+			portfolio.GET("/portfolios", portfolioHandler.ListPortfolios)
+			portfolio.GET("/portfolios/:portfolioId", portfolioHandler.GetPortfolioDetail)
+			portfolio.DELETE("/portfolios/:portfolioId", portfolioHandler.DeletePortfolio)
+
+			portfolio.POST("/portfolios/:portfolioId/holdings", portfolioHandler.AddHolding)
+			portfolio.PUT("/portfolios/:portfolioId/holdings/:holdingId", portfolioHandler.UpdateHolding)
+			portfolio.DELETE("/portfolios/:portfolioId/holdings/:holdingId", portfolioHandler.RemoveHolding)
+
+			portfolio.GET("/portfolios/:portfolioId/summary", portfolioHandler.GetPortfolioSummary)
+			portfolio.GET("/portfolios/:portfolioId/risk", portfolioHandler.GetPortfolioRisk)
 		}
 	}
 }

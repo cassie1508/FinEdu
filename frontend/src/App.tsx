@@ -1,13 +1,20 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { HomePage } from './pages/HomePage'
 import { MarketDashboardPage } from './features/market-dashboard/pages/MarketDashboardPage'
 import { NewsPage } from './features/news/pages/NewsPage'
 import { LearningCenterPage } from './features/learning-center/pages/LearningCenterPage'
-import { PortfolioPage } from './features/portfolio/pages/PortfolioPage'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { SignUpPage } from './features/auth/pages/SignUpPage'
 import { RequireGuest } from './features/auth/components/RequireGuest'
+import { RequireAuth } from './features/auth/components/RequireAuth'
+
+const PortfolioPage = lazy(() =>
+  import('./features/portfolio/pages/PortfolioPage').then((module) => ({
+    default: module.PortfolioPage,
+  })),
+)
 
 function App() {
   return (
@@ -38,7 +45,16 @@ function App() {
                 <Route path="/dashboard" element={<MarketDashboardPage />} />
                 <Route path="/news" element={<NewsPage />} />
                 <Route path="/learn" element={<LearningCenterPage />} />
-                <Route path="/portfolio" element={<PortfolioPage />} />
+                <Route
+                  path="/portfolio"
+                  element={
+                    <RequireAuth>
+                      <Suspense fallback={<div className="h-80 animate-pulse rounded-2xl bg-[#E3DEDE]" />}>
+                        <PortfolioPage />
+                      </Suspense>
+                    </RequireAuth>
+                  }
+                />
               </Routes>
             </Layout>
           }
