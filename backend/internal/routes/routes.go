@@ -14,7 +14,7 @@ import (
 	"finedu-backend/internal/service"
 )
 
-func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg config.Config) {
+func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg config.Config, defaultUserID string) {
 	r.GET("/health", handlers.HealthCheck)
 
 	api := r.Group("/api/v1")
@@ -66,6 +66,37 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg confi
 		{
 			learning.POST("/chat", handlers.ChatWithAI)
 			learning.GET("/flashcards", handlers.GetFlashcards)
+			learning.GET("/flashcards/:id", handlers.GetFlashcardByID)
+			learning.POST("/flashcards", handlers.CreateFlashcard)
+			learning.PUT("/flashcards/:id", handlers.UpdateFlashcard)
+			learning.DELETE("/flashcards/:id", handlers.DeleteFlashcard)
+			learning.POST("/flashcards/:id/review", handlers.ReviewFlashcard)
+			learning.GET("/resources/podcast", handlers.GetPodcastByListennotes)
+
+		}
+
+		learningCenter := api.Group("/learning_center")
+		{
+			learningCenter.GET("/resources", handlers.GetLearningResources)
+		}
+
+		// RAG Pipeline endpoints
+		rag := api.Group("/rag")
+		{
+			ragHandler := handlers.NewRAGHandler(pool, defaultUserID)
+			rag.POST("/query", ragHandler.QueryRAG)
+		}
+
+		// AI Recommendation endpoints
+		recommendations := api.Group("/recommendations")
+		{
+			recommendations.POST("", handlers.GetRecommendations(pool, defaultUserID))
+		}
+
+		documents := api.Group("/documents")
+		{
+			ragHandler := handlers.NewRAGHandler(pool, defaultUserID)
+			documents.POST("/upload", ragHandler.UploadDocument)
 		}
 
 		// Portfolio routes — require authentication

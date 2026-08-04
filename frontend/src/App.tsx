@@ -44,7 +44,14 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/dashboard" element={<MarketDashboardPage />} />
                 <Route path="/news" element={<NewsPage />} />
-                <Route path="/learn" element={<LearningCenterPage />} />
+                <Route
+                  path="/learn"
+                  element={
+                    <RequireAuth>
+                      <LearningCenterPage />
+                    </RequireAuth>
+                  }
+                />
                 <Route
                   path="/portfolio"
                   element={

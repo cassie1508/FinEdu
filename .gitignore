@@ -16,11 +16,16 @@ pnpm-debug.log*
 # Backend (Go)
 backend/tmp
 backend/bin
+backend/venv
 *.exe
 *.exe~
 *.dll
 *.test
 *.out
+
+# Python
+__pycache__/
+*.pyc
 
 # Editor / OS
 .vscode/*
