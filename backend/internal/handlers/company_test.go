@@ -11,6 +11,7 @@ import (
 
 	"finedu-backend/internal/models"
 	"finedu-backend/internal/repository"
+	"finedu-backend/internal/service"
 )
 
 // mockCompanyRepo là repo giả dùng cho test, không cần database thật.
@@ -28,6 +29,10 @@ func (m *mockCompanyRepo) Search(_ context.Context, _ string) ([]models.Company,
 	return m.companies, m.err
 }
 
+func (m *mockCompanyRepo) Upsert(_ context.Context, _ *models.Company) error {
+	return nil
+}
+
 var sampleCompany = &models.Company{
 	Symbol: "AAPL", Name: "Apple Inc.", Sector: "Technology",
 	Industry: "Consumer Electronics", MarketCap: 3e12, Revenue: 3.83e11,
@@ -37,7 +42,7 @@ var sampleCompany = &models.Company{
 func setupRouter(repo CompanyRepo) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
-	h := NewCompanyHandler(repo)
+	h := NewCompanyHandler(repo, service.NewCompanyDataService(""))
 	r.GET("/api/v1/companies", h.SearchCompanies)
 	r.GET("/api/v1/companies/:symbol", h.GetCompany)
 	return r

@@ -33,7 +33,8 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, jwks keyfunc.Keyfunc, cfg confi
 		chartsHandler := handlers.NewChartsHandler(marketData)
 
 		companyRepo := repository.NewCompanyRepository(pool)
-		companyHandler := handlers.NewCompanyHandler(companyRepo)
+		companyDataService := service.NewCompanyDataService(cfg.FinnhubAPIKey)
+		companyHandler := handlers.NewCompanyHandler(companyRepo, companyDataService)
 
 		companies := api.Group("/companies")
 		{
